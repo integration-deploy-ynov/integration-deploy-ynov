@@ -41,11 +41,12 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
   bool _isLampOn = false;
-  // URL de base pour l'API - à modifier selon votre backend
-  final String apiUrl = 'http://localhost:3000/api';
+  // URL de base pour l'API - correction du port pour correspondre au backend
+  final String apiUrl = 'http://10.0.2.2:5000/api';
   bool _isLoading = false;
   late AnimationController _animationController;
   String _serverStatus = "NON CONNECTÉ";
+  int _currentLampId = 1; // Par défaut, on utilise la lampe avec l'ID 1
 
   @override
   void initState() {
@@ -71,18 +72,28 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     });
     
     try {
-      final response = await http.get(Uri.parse('$apiUrl/lamp'));
+      final response = await http.get(Uri.parse('$apiUrl/lamps'));
       
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _isLampOn = data['status'] == 'on';
-          _serverStatus = "CONNECTÉ";
-        });
-        if (_isLampOn) {
-          _animationController.forward();
-        } else {
-          _animationController.reverse();
+        final List<dynamic> lamps = jsonDecode(response.body);
+        if (lamps.isNotEmpty) {
+          // On utilise la première lampe trouvée (ou celle avec l'ID spécifié si elle existe)
+          final lamp = lamps.firstWhere(
+            (lamp) => lamp['id'] == _currentLampId,
+            orElse: () => lamps.first
+          );
+          
+          setState(() {
+            _currentLampId = lamp['id'];
+            _isLampOn = lamp['state'] == true;
+            _serverStatus = "CONNECTÉ";
+          });
+          
+          if (_isLampOn) {
+            _animationController.forward();
+          } else {
+            _animationController.reverse();
+          }
         }
       } else {
         setState(() {
@@ -90,7 +101,6 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         });
       }
     } catch (e) {
-      // En cas d'erreur, on peut supposer que la lampe est éteinte
       print('Erreur lors de la récupération de l\'état de la lampe: $e');
       setState(() {
         _serverStatus = "NON CONNECTÉ";
@@ -109,16 +119,14 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     });
     
     try {
-      final newStatus = _isLampOn ? 'off' : 'on';
-      final response = await http.post(
-        Uri.parse('$apiUrl/lamp'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'status': newStatus}),
+      final response = await http.put(
+        Uri.parse('$apiUrl/lamps/$_currentLampId'),
       );
       
       if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
         setState(() {
-          _isLampOn = !_isLampOn;
+          _isLampOn = data['lamp']['state'] == true;
           _serverStatus = "CONNECTÉ";
         });
         
@@ -269,7 +277,18 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                 letterSpacing: 1,
               ),
             ).animate().fadeIn(delay: 400.ms),
-            const SizedBox(height: 80),
+            const SizedBox(height: 16),
+            // Lamp ID indicator
+            Text(
+              'LAMPE ID: $_currentLampId',
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: Colors.white.withOpacity(0.6),
+                letterSpacing: 1,
+              ),
+            ).animate().fadeIn(delay: 450.ms),
+            const SizedBox(height: 64),
             // Power button
             GestureDetector(
               onTap: _isLoading ? null : _toggleLamp,
