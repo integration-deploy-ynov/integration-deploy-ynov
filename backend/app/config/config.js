@@ -1,33 +1,18 @@
-require('dotenv').config({ path: '../.env' });
-
-const {
-    DB_USERNAME,
-    DB_PASSWORD,
-    DB_DATABASE,
-    DB_HOST,
-    DB_DIALECT
-} = process.env;
-
 module.exports = {
     development: {
-        username: DB_USERNAME,
-        password: DB_PASSWORD,
-        database: DB_DATABASE,
-        host: DB_HOST,
-        dialect: DB_DIALECT
+      dialect: 'sqlite',
+      storage: './app/database.sqlite', // Spécifie le chemin relatif vers le fichier de ta base de données
+      logging: false // Optionnel : éviter d'afficher les requêtes SQL dans la console
     },
     test: {
-        username: DB_USERNAME,
-        password: DB_PASSWORD,
-        database: DB_DATABASE,
-        host: DB_HOST,
-        dialect: DB_DIALECT
+      dialect: 'sqlite',
+      storage: './app/database.sqlite',
+      logging: false
     },
     production: {
-        username: DB_USERNAME,
-        password: DB_PASSWORD,
-        database: DB_DATABASE,
-        host: DB_HOST,
-        dialect: DB_DIALECT
+      dialect: 'sqlite',
+      storage: './app/database.sqlite',
+      logging: false
     }
-};
+  };
+  
