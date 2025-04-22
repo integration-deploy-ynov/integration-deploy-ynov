@@ -5,7 +5,7 @@ const lampsCtrl = require('../controllers/lamps.js');
 /**
  * Routes pour gérer les defis.
  */
-router.post('/', lampsCtrl.start);
-router.put('/', lampsCtrl.readAll);
+router.get('/', lampsCtrl.readAll);
+router.put('/:id', lampsCtrl.update);
 
 module.exports = router;
