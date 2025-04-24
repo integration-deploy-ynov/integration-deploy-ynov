@@ -1,30 +1,54 @@
 version: 2.1
 
 orbs:
-  node: circleci/node@5.1.0
   flutter: circleci/flutter@2.0.2
 
 executors:
-  node-executor:
-    docker:
-      - image: cimg/node:18.16.0
   flutter-executor:
     docker:
-      - image: cimg/android:2023.06-browsers
+      - image: ghcr.io/cirruslabs/flutter:3.29.3
+  node-executor:
+    docker:
+      - image: cimg/node:23.0.0
 
 jobs:
-  setup-backend:
-    executor: node-executor
+  # Setup Flutter
+  setup-flutter:
+    executor: flutter-executor
     steps:
       - checkout
-      - node/install-packages:
-          pkg-manager: npm
-          app-dir: ./backend
+      - flutter/install_sdk
+      - run:
+          name: Flutter Pub Get
+          command: cd mobile && flutter pub get
       - persist_to_workspace:
           root: .
           paths:
-            - backend/node_modules
-    
+            - mobile/.pub-cache/
+            - mobile/.dart_tool/
+            - mobile/pubspec.lock
+
+  # Setup Node.js
+  setup-node:
+    executor: node-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-npm-deps-{{ checksum "backend/package.json" }}
+      - run:
+          name: Install npm packages
+          command: cd backend && npm install
+      - save_cache:
+          key: v1-npm-deps-{{ checksum "backend/package.json" }}
+          paths:
+            - backend/node_modules/
+      - persist_to_workspace:
+          root: .
+          paths:
+            - backend/node_modules/
+
+  # Tests du backend
   test-backend:
     executor: node-executor
     steps:
@@ -35,65 +59,138 @@ jobs:
           name: Initialize Database
           command: cd backend && node app/scripts/initDB.js
       - run:
-          name: Run Backend Tests
-          command: cd backend && npm test
-  
-  setup-frontend:
+          name: Run tests
+          command: cd backend && npm run test
+
+  # Tests de l'application Flutter
+  test-flutter:
     executor: flutter-executor
     steps:
       - checkout
-      - flutter/install_sdk:
-          version: 3.19.3
+      - attach_workspace:
+          at: .
+      - flutter/install_sdk
       - run:
-          name: Flutter Version
-          command: flutter --version
+          name: Run Flutter tests
+          command: cd mobile && flutter test
+
+  # Lint Backend
+  lint-backend:
+    executor: node-executor
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
       - run:
-          name: Get Flutter Dependencies
-          command: cd mobile && flutter pub get
+          name: Lint backend code
+          command: cd backend && npm run lint || true
+
+  # Lint Flutter
+  lint-flutter:
+    executor: flutter-executor
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - flutter/install_sdk
+      - run:
+          name: Analyze Flutter code
+          command: cd mobile && flutter analyze
+
+  # Build du backend
+  build-backend:
+    executor: node-executor
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build backend
+          command: cd backend && npm ci --production && npm prune --production
       - persist_to_workspace:
           root: .
           paths:
-            - mobile/.pub-cache
-            - mobile/.dart_tool
-            - mobile/.flutter-plugins
-            - mobile/.flutter-plugins-dependencies
-  
-  test-frontend:
+            - backend/
+      - store_artifacts:
+          path: backend/
+          destination: backend-build
+
+  # Build de l'application Flutter (Android)
+  build-android:
     executor: flutter-executor
     steps:
       - checkout
-      - flutter/install_sdk:
-          version: 3.19.3
       - attach_workspace:
           at: .
+      - flutter/install_sdk
       - run:
-          name: Run Flutter Tests
-          command: cd mobile && flutter test
-  
-  analyze-frontend:
+          name: Build APK
+          command: cd mobile && flutter build apk --release
+      - store_artifacts:
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          destination: app-release.apk
+
+  # Build de l'application Flutter (iOS)
+  build-ios:
     executor: flutter-executor
     steps:
       - checkout
-      - flutter/install_sdk:
-          version: 3.19.3
       - attach_workspace:
           at: .
+      - flutter/install_sdk
       - run:
-          name: Analyze Flutter Code
-          command: cd mobile && flutter analyze
+          name: Build iOS (no codesign)
+          command: cd mobile && flutter build ios --release --no-codesign
+      - store_artifacts:
+          path: mobile/build/ios/iphoneos
+          destination: ios-build
 
 workflows:
   version: 2
   build-test-deploy:
     jobs:
-      - setup-backend
+      - setup-flutter
+      - setup-node
       - test-backend:
           requires:
-            - setup-backend
-      - setup-frontend
-      - test-frontend:
+            - setup-node
+      - test-flutter:
           requires:
-            - setup-frontend
-      - analyze-frontend:
+            - setup-flutter
+      - lint-backend:
           requires:
-            - setup-frontend
+            - setup-node
+      - lint-flutter:
+          requires:
+            - setup-flutter
+      - build-backend:
+          requires:
+            - test-backend
+            - lint-backend
+          filters:
+            branches:
+              only:
+                - main
+            tags:
+              only: /.*/
+      - build-android:
+          requires:
+            - test-flutter
+            - lint-flutter
+          filters:
+            branches:
+              only:
+                - main
+            tags:
+              only: /.*/
+      - build-ios:
+          requires:
+            - test-flutter
+            - lint-flutter
+          filters:
+            branches:
+              only:
+                - main
+            tags:
+              only: /.*/
+          type: approval
