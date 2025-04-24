@@ -16,7 +16,7 @@ describe('Lamps Routes', () => {
   
   test('PUT /api/lamps/:id should return 404 if lamp does not exist', async () => {
     const response = await request(app).put('/api/lamps/9999'); // ID peu probable
-  
+
     expect(response.status).toBe(404);
     expect(response.body.error).toMatch(/non trouvée/i);
   });

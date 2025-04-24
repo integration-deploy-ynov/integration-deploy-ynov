@@ -1,6 +1,5 @@
 const request = require('supertest');
 const initApp = require('../app');
-const rateLimit = require('express-rate-limit');
 
 describe('App Setup', () => {
   let app;
