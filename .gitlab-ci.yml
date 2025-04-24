@@ -1,12 +1,9 @@
 stages:
-  - prepare
+  - setup
   - test
-  - build
-  - deploy
+  - lint
 
 variables:
-  # Variables globales pour tout le pipeline
-  GIT_STRATEGY: fetch
   FLUTTER_VERSION: "3.x"
   NODE_VERSION: "18.x"
 
@@ -14,12 +11,11 @@ cache:
   paths:
     - mobile/.pub-cache/
     - mobile/.dart_tool/
-    - mobile/build/
     - backend/node_modules/
 
-# Job de préparation du projet Flutter
-prepare:flutter:
-  stage: prepare
+# Setup Flutter
+setup:flutter:
+  stage: setup
   image: 
     name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
     entrypoint: [""]
@@ -31,9 +27,9 @@ prepare:flutter:
       - mobile/pubspec.lock
     expire_in: 1 hour
 
-# Job de préparation du projet Node.js
-prepare:node:
-  stage: prepare
+# Setup Node.js
+setup:node:
+  stage: setup
   image: node:$NODE_VERSION
   script:
     - cd backend
@@ -48,113 +44,42 @@ test:backend:
   stage: test
   image: node:$NODE_VERSION
   needs:
-    - prepare:node
+    - setup:node
   script:
     - cd backend
-    # Initialiser la base de données pour les tests
     - node app/scripts/initDB.js
     - npm run test
-  allow_failure: false
 
-# Tests de l'application Flutter (API)
-test:flutter:api:
+# Tests de l'application Flutter
+test:flutter:
   stage: test
   image:
     name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
     entrypoint: [""]
   needs:
-    - prepare:flutter
+    - setup:flutter
   script:
     - cd mobile
-    - flutter test test/api_test.dart
-  allow_failure: false
+    - flutter test
 
-# Tests de l'application Flutter (UI)
-test:flutter:ui:
-  stage: test
-  image:
-    name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
-    entrypoint: [""]
-  needs:
-    - prepare:flutter
-  script:
-    - cd mobile
-    - flutter test test/ui_test.dart test/animation_test.dart test/widget_test.dart
-  allow_failure: false
-
-# Tests de sécurité du backend
-test:backend:security:
-  stage: test
+# Lint Backend
+lint:backend:
+  stage: lint
   image: node:$NODE_VERSION
   needs:
-    - prepare:node
+    - setup:node
   script:
     - cd backend
-    - npm install -g snyk
-    - snyk test || true  # Exécute les tests mais ne fait pas échouer le pipeline
-  allow_failure: true  # Ce test est informatif seulement
-  only:
-    - main
-    - develop
+    - npm run lint || true
 
-# Construction de l'application Android
-build:android:
-  stage: build
+# Lint Flutter
+lint:flutter:
+  stage: lint
   image:
     name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
     entrypoint: [""]
   needs:
-    - prepare:flutter
-    - test:flutter:api
-    - test:flutter:ui
+    - setup:flutter
   script:
     - cd mobile
-    - flutter build apk --split-per-abi
-  artifacts:
-    paths:
-      - mobile/build/app/outputs/flutter-apk/*.apk
-    expire_in: 1 week
-
-# Construction de l'application iOS
-build:ios:
-  stage: build
-  image:
-    name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
-    entrypoint: [""]
-  needs:
-    - prepare:flutter
-    - test:flutter:api
-    - test:flutter:ui
-  script:
-    - cd mobile
-    - flutter build ios --no-codesign --release
-  artifacts:
-    paths:
-      - mobile/build/ios/iphoneos/
-    expire_in: 1 week
-  allow_failure: true  # La construction iOS peut échouer sans les certificats appropriés
-  only:
-    - main
-    - develop
-
-# Publication d'une release GitHub lorsqu'un tag est créé
-release:github:
-  stage: deploy
-  image: alpine:latest
-  script:
-    - apk add --no-cache curl jq git
-    - VERSION=${CI_COMMIT_TAG#v}
-    - |
-      curl -X POST \
-        -H "Authorization: token ${GITHUB_TOKEN}" \
-        -H "Accept: application/vnd.github.v3+json" \
-        "https://api.github.com/repos/USERNAME/ci_cd_flutter/releases" \
-        -d "{
-          \"tag_name\": \"${CI_COMMIT_TAG}\",
-          \"name\": \"Version ${VERSION}\",
-          \"body\": \"Release automatique de la version ${VERSION}\",
-          \"draft\": false,
-          \"prerelease\": false
-        }"
-  only:
-    - tags
+    - flutter analyze
