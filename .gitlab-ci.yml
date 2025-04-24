@@ -2,6 +2,7 @@ stages:
   - setup
   - test
   - lint
+  - build
 
 variables:
   FLUTTER_VERSION: "3.29.3"
@@ -83,3 +84,65 @@ lint:flutter:
   script:
     - cd mobile
     - flutter analyze
+
+# Build du backend
+build:backend:
+  stage: build
+  image: node:$NODE_VERSION
+  needs:
+    - test:backend
+    - lint:backend
+  script:
+    - cd backend
+    - npm ci --production
+    - npm prune --production
+  artifacts:
+    paths:
+      - backend/
+    expire_in: 1 week
+  only:
+    - main
+    - tags
+
+# Build de l'application Flutter (Android)
+build:android:
+  stage: build
+  image:
+    name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
+    entrypoint: [""]
+  needs:
+    - test:flutter
+    - lint:flutter
+  script:
+    - cd mobile
+    - flutter build apk --release
+  artifacts:
+    paths:
+      - mobile/build/app/outputs/flutter-apk/app-release.apk
+    expire_in: 1 week
+  only:
+    - main
+    - tags
+
+# Build de l'application Flutter (iOS)
+build:ios:
+  stage: build
+  image:
+    name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
+    entrypoint: [""]
+  needs:
+    - test:flutter
+    - lint:flutter
+  script:
+    - cd mobile
+    - flutter build ios --release --no-codesign
+  artifacts:
+    paths:
+      - mobile/build/ios/iphoneos
+    expire_in: 1 week
+  only:
+    - main
+    - tags
+  # Note: Ce build ne produira pas un IPA complet sans code signing
+  # Pour un environnement de CI réel, vous aurez besoin des certificats Apple appropriés
+  when: manual
