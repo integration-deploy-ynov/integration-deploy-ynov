@@ -1,7 +1,14 @@
+/* eslint-disable no-console */
 require('dotenv').config();
-const app = require("./app.js");
+const initApp = require('./app.js');
 const port = process.env.PORT;
 
-app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`)
-})
+const startServer = async () => {
+  const app = await initApp();
+  app.listen(port, () => {
+    console.log(`Example app listening on port ${port}`);
+  });
+};
+
+startServer();
+/* eslint-enable no-console */

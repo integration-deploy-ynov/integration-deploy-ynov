@@ -33,17 +33,20 @@ backend/
 ### Prérequis
 
 Assurez-vous d'avoir les outils suivants installés sur votre machine :
+
 - [Node.js](https://nodejs.org/) (version 14 ou supérieure)
 - [npm](https://www.npmjs.com/) (ou [Yarn](https://yarnpkg.com/) si vous préférez)
 
 ### Étapes d'installation
 
 1. Installez les dépendances
+
    ```
    npm install
    ```
 
 2. Exécutez les migrations pour configurer la base de données
+
    ```
    npx sequelize-cli db:migrate
    ```
@@ -58,9 +61,11 @@ Le serveur démarre par défaut sur le port 5000. Vous pouvez modifier ce port e
 ## Utilisation de l'API
 
 ### Récupérer toutes les lampes
+
 **Méthode** : GET  
 **Endpoint** : `/api/lamps`  
 **Réponse** :
+
 ```json
 [
   {
@@ -75,13 +80,15 @@ Le serveur démarre par défaut sur le port 5000. Vous pouvez modifier ce port e
 ```
 
 ### Mettre à jour l'état d'une lampe
+
 **Méthode** : PUT  
 **Endpoint** : `/api/lamps/:id`  
-**Paramètres** : `id` - L'ID de la lampe à mettre à jour  
+**Paramètres** : `id` - L'ID de la lampe à mettre à jour
 
 L'état de la lampe sera inversé (si elle est allumée, elle devient éteinte, et inversement).
 
 **Réponse** :
+
 ```json
 {
   "message": "Lampe mise à jour avec succès",
@@ -95,6 +102,7 @@ L'état de la lampe sera inversé (si elle est allumée, elle devient éteinte, 
 ## Sécurité
 
 L'API utilise plusieurs middlewares pour améliorer la sécurité :
+
 - **helmet** : Protection contre les vulnérabilités web courantes
 - **express-rate-limit** : Limitation du nombre de requêtes par utilisateur
 - **express-slow-down** : Ralentissement progressif des requêtes suspectes

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 'use strict';
 
 module.exports = {
@@ -27,3 +28,4 @@ module.exports = {
     await queryInterface.dropTable('lamps');
   }
 };
+/* eslint-enable no-unused-vars */

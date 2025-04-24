@@ -1,0 +1,148 @@
+stages:
+  - setup
+  - test
+  - lint
+  - build
+
+variables:
+  FLUTTER_VERSION: "3.29.3"
+  NODE_VERSION: "23"
+
+cache:
+  paths:
+    - mobile/.pub-cache/
+    - mobile/.dart_tool/
+    - backend/node_modules/
+
+# Setup Flutter
+setup:flutter:
+  stage: setup
+  image: 
+    name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
+    entrypoint: [""]
+  script:
+    - cd mobile
+    - flutter pub get
+  artifacts:
+    paths:
+      - mobile/pubspec.lock
+    expire_in: 1 hour
+
+# Setup Node.js
+setup:node:
+  stage: setup
+  image: node:$NODE_VERSION
+  script:
+    - cd backend
+    - npm install
+  artifacts:
+    paths:
+      - backend/node_modules/
+    expire_in: 1 hour
+
+# Tests du backend
+test:backend:
+  stage: test
+  image: node:$NODE_VERSION
+  needs:
+    - setup:node
+  script:
+    - cd backend
+    - node app/scripts/initDB.js
+    - npm run test
+
+# Tests de l'application Flutter
+test:flutter:
+  stage: test
+  image:
+    name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
+    entrypoint: [""]
+  needs:
+    - setup:flutter
+  script:
+    - cd mobile
+    - flutter test
+
+# Lint Backend
+lint:backend:
+  stage: lint
+  image: node:$NODE_VERSION
+  needs:
+    - setup:node
+  script:
+    - cd backend
+    - npm run lint || true
+
+# Lint Flutter
+lint:flutter:
+  stage: lint
+  image:
+    name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
+    entrypoint: [""]
+  needs:
+    - setup:flutter
+  script:
+    - cd mobile
+    - flutter analyze
+
+# Build du backend
+build:backend:
+  stage: build
+  image: node:$NODE_VERSION
+  needs:
+    - test:backend
+    - lint:backend
+  script:
+    - cd backend
+    - npm ci --production
+    - npm prune --production
+  artifacts:
+    paths:
+      - backend/
+    expire_in: 1 week
+  only:
+    - main
+    - tags
+
+# Build de l'application Flutter (Android)
+build:android:
+  stage: build
+  image:
+    name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
+    entrypoint: [""]
+  needs:
+    - test:flutter
+    - lint:flutter
+  script:
+    - cd mobile
+    - flutter build apk --release
+  artifacts:
+    paths:
+      - mobile/build/app/outputs/flutter-apk/app-release.apk
+    expire_in: 1 week
+  only:
+    - main
+    - tags
+
+# Build de l'application Flutter (iOS)
+build:ios:
+  stage: build
+  image:
+    name: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
+    entrypoint: [""]
+  needs:
+    - test:flutter
+    - lint:flutter
+  script:
+    - cd mobile
+    - flutter build ios --release --no-codesign
+  artifacts:
+    paths:
+      - mobile/build/ios/iphoneos
+    expire_in: 1 week
+  only:
+    - main
+    - tags
+  # Note: Ce build ne produira pas un IPA complet sans code signing
+  # Pour un environnement de CI réel, vous aurez besoin des certificats Apple appropriés
+  when: manual
