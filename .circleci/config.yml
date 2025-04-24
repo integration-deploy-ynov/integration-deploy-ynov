@@ -1,43 +1,129 @@
-# This config was automatically generated from your source code
-# Stacks detected: cicd:gitlab-workflows:.,deps:node:backend,deps:php:backend/node_modules/moment-timezone,test:jest:
 version: 2.1
-orbs:
-  node: circleci/node@5
-jobs:
-  test-node:
-    # Install node dependencies and run tests
-    executor: node/default
-    working_directory: ~/project/backend
-    environment:
-      JEST_JUNIT_OUTPUT_DIR: ./test-results/
-    steps:
-      - checkout:
-          path: ~/project
-      - node/install-packages:
-          pkg-manager: npm
-      - run:
-          command: npm install jest-junit
-      - run:
-          name: Run tests
-          command: npm run test --ci --runInBand --reporters=default --reporters=jest-junit
-      - store_test_results:
-          path: ./test-results/
-  deploy:
-    # This is an example deploy job, not actually used by the workflow
+
+executors:
+  flutter:
     docker:
-      - image: cimg/base:stable
+      - image: ghcr.io/cirruslabs/flutter:3.29.3
+    environment:
+      FLUTTER_VERSION: "3.29.3"
+  node:
+    docker:
+      - image: node:23
+    environment:
+      NODE_VERSION: "23"
+
+jobs:
+  setup_flutter:
+    executor: flutter
     steps:
-      # Replace this with steps to deploy to users
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-flutter-{{ checksum "mobile/pubspec.lock" }}
       - run:
-          name: deploy
-          command: '#e.g. ./deploy.sh'
+          name: Flutter pub get
+          command: |
+            cd mobile
+            flutter pub get
+      - save_cache:
+          key: v1-flutter-{{ checksum "mobile/pubspec.lock" }}
+          paths:
+            - mobile/.pub-cache/
+            - mobile/.dart_tool/
+      - persist_to_workspace:
+          root: .
+          paths:
+            - mobile/pubspec.lock
+
+  setup_node:
+    executor: node
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-node-{{ checksum "backend/package-lock.json" }}
       - run:
-          name: found gitlab workflows config
-          command: ':'
+          name: NPM install
+          command: |
+            cd backend
+            npm install
+      - save_cache:
+          key: v1-node-{{ checksum "backend/package-lock.json" }}
+          paths:
+            - backend/node_modules/
+      - persist_to_workspace:
+          root: .
+          paths:
+            - backend/node_modules/
+
+  test_backend:
+    executor: node
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Init DB
+          command: |
+            cd backend
+            node app/scripts/initDB.js
+      - run:
+          name: Run backend tests
+          command: |
+            cd backend
+            npm run test
+
+  test_flutter:
+    executor: flutter
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Flutter test
+          command: |
+            cd mobile
+            flutter test
+
+  lint_backend:
+    executor: node
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Lint backend
+          command: |
+            cd backend
+            npm run lint || true
+
+  lint_flutter:
+    executor: flutter
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Flutter analyze
+          command: |
+            cd mobile
+            flutter analyze
+
 workflows:
-  build-and-test:
+  version: 2
+  build_and_test:
     jobs:
-      - test-node
-    # - deploy:
-    #     requires:
-    #       - test-node
+      - setup_flutter
+      - setup_node
+      - test_backend:
+          requires:
+            - setup_node
+      - test_flutter:
+          requires:
+            - setup_flutter
+      - lint_backend:
+          requires:
+            - setup_node
+      - lint_flutter:
+          requires:
+            - setup_flutter
