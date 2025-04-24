@@ -1,5 +1,6 @@
+/* eslint-disable no-console */
 require('dotenv').config();
-const initApp = require("./app.js");
+const initApp = require('./app.js');
 const port = process.env.PORT;
 
 const startServer = async () => {
@@ -10,3 +11,4 @@ const startServer = async () => {
 };
 
 startServer();
+/* eslint-enable no-console */
