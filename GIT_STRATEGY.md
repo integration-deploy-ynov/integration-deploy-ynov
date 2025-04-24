@@ -4,31 +4,31 @@ Ce document décrit la stratégie Git à suivre pour le projet Smart Lighting. I
 
 ## Rôles et Responsabilités
 
-### Lead Developer
+### Lead Developer Lukas
 - Responsable de la structure globale du projet
 - Approuve les pull requests pour la branche `main`
 - Définit les standards de code et les bonnes pratiques
 - Gère les releases et le versioning
 
-### Frontend Developer
+### Frontend Developer Kévin
 - Travaille principalement sur l'application Flutter (`mobile/`)
 - Crée et maintient les fonctionnalités UI/UX
 - Effectue des tests sur la partie frontend
 - Assure la compatibilité avec le backend
 
-### Backend Developer
+### Backend Developer Omar
 - Travaille principalement sur l'API Node.js (`backend/`)
 - Développe et maintient les endpoints d'API
 - Gère les modèles de données et la structure de la BDD
 - Assure les performances et la sécurité du backend
 
-### QA Engineer
+### QA Engineer Valentin
 - Valide les fonctionnalités avant merge dans `main`
 - Effectue les tests manuels et automatisés
 - Identifie et rapporte les bugs
 - Valide les critères d'acceptance
 
-### DevOps Engineer
+### DevOps Engineer Hicham
 - Configure et maintient les pipelines CI/CD
 - Gère les environnements de déploiement
 - Assure la qualité et la sécurité du processus de déploiement
