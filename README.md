@@ -116,6 +116,24 @@ Pour plus de détails sur chaque composant du système, consultez les README sp�
 - Flutter Animate
 - Google Fonts
 
+### Versioning & Releases
+
+Ce projet suit la stratégie de versioning **SemVer** (MAJOR.MINOR.PATCH).
+
+### Processus de Release
+
+1. **Mise à jour du changelog** : Chaque changement est consigné dans un changelog dans `CHANGELOG.md`.
+2. **Création du tag** : Lors d'une nouvelle release, un tag est créé avec le format `vX.Y.Z`.
+3. **Automatisation des releases** : Le script `release.sh` permet de générer automatiquement les tags et de mettre à jour le changelog.
+
+### Utilisation du Script de Release
+
+1. Exécuter `release.sh` pour générer un changelog, créer un tag, et pousser la version.
+2. Exemple :
+   ```bash
+   ./release.sh
+
+
 ## 🤝 Contribution
 
 Les contributions sont les bienvenues ! N'hésitez pas à soumettre des issues ou des pull requests.
