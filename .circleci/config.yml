@@ -1,12 +1,9 @@
 version: 2.1
 
-orbs:
-  flutter: circleci/flutter@2.0.2
-
 executors:
   flutter-executor:
     docker:
-      - image: ghcr.io/cirruslabs/flutter:3.19.3
+      - image: cimg/android:2023.12.1-node
   node-executor:
     docker:
       - image: cimg/node:23.0.0
@@ -17,10 +14,21 @@ jobs:
     executor: flutter-executor
     steps:
       - checkout
-      - flutter/install_sdk
       - run:
-          name: Configure Git Safe Directory
-          command: git config --global --add safe.directory /root/usr/development/flutter
+          name: Install Flutter SDK
+          command: |
+            wget -O flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.19.3-stable.tar.xz
+            tar xf flutter.tar.xz -C ${HOME}
+            export PATH="$PATH:${HOME}/flutter/bin"
+            echo 'export PATH="$PATH:${HOME}/flutter/bin"' >> $BASH_ENV
+            flutter precache
+            flutter config --no-analytics
+            flutter doctor -v
+      - run:
+          name: Check Dart Version
+          command: |
+            flutter --version
+            dart --version
       - run:
           name: Flutter Pub Get
           command: cd mobile && flutter pub get
@@ -30,6 +38,7 @@ jobs:
             - mobile/.pub-cache/
             - mobile/.dart_tool/
             - mobile/pubspec.lock
+            - ${HOME}/flutter
 
   # Setup Node.js
   setup-node:
@@ -72,7 +81,6 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - flutter/install_sdk
       - run:
           name: Run Flutter tests
           command: cd mobile && flutter test
@@ -95,7 +103,6 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - flutter/install_sdk
       - run:
           name: Analyze Flutter code
           command: cd mobile && flutter analyze
@@ -125,7 +132,6 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - flutter/install_sdk
       - run:
           name: Build APK
           command: cd mobile && flutter build apk --release
@@ -140,7 +146,6 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - flutter/install_sdk
       - run:
           name: Build iOS (no codesign)
           command: cd mobile && flutter build ios --release --no-codesign
