@@ -1,0 +1,42 @@
+name: Release
+
+# Le workflow se déclenche sur un push vers la branche `main`
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    # Utiliser l'image Ubuntu la plus récente pour exécuter le job
+    runs-on: ubuntu-latest
+
+    steps:
+      # Étape 1: Récupérer le code du dépôt
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          # Assure-toi de récupérer toutes les branches
+          fetch-depth: 0
+
+      # Étape 2: Installer des dépendances nécessaires (si tu utilises Node.js ou d'autres dépendances)
+      - name: Set up Node.js (si besoin)
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      # Étape 3: Vérifier la version de Node.js et des autres outils
+      - name: Check Node.js version
+        run: node --version
+
+      # Étape 4: Exécuter le script de release
+      - name: Run release script
+        run: |
+          chmod +x ./release/release.sh
+          ./release/release.sh
+          
+      # Étape 5: Push du changelog et du tag vers le dépôt distant
+      - name: Push changes
+        run: |
+          git push origin main
+          git push origin $(cat VERSION)
