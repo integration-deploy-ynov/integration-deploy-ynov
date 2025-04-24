@@ -1,0 +1,231 @@
+name: CI/CD Flutter & Node.js
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # Jobs de setup
+  setup-flutter:
+    name: Setup Flutter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          channel: 'stable'
+      - name: Get dependencies
+        run: |
+          cd mobile
+          flutter pub get
+      - name: Cache Flutter dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            mobile/.pub-cache/
+            mobile/.dart_tool/
+          key: ${{ runner.os }}-flutter-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: ${{ runner.os }}-flutter-
+
+  setup-node:
+    name: Setup Node.js
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '23'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm install
+      - name: Cache Node modules
+        uses: actions/cache@v3
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-
+
+  # Jobs de test
+  test-backend:
+    name: Test Backend
+    needs: setup-node
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '23'
+      - name: Restore Node modules cache
+        uses: actions/cache@v3
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
+      - name: Initialize Database
+        run: |
+          cd backend
+          node app/scripts/initDB.js
+      - name: Run tests
+        run: |
+          cd backend
+          npm run test
+
+  test-flutter:
+    name: Test Flutter
+    needs: setup-flutter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          channel: 'stable'
+      - name: Restore Flutter dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            mobile/.pub-cache/
+            mobile/.dart_tool/
+          key: ${{ runner.os }}-flutter-${{ hashFiles('mobile/pubspec.lock') }}
+      - name: Run Flutter tests
+        run: |
+          cd mobile
+          flutter test
+
+  # Jobs de lint
+  lint-backend:
+    name: Lint Backend
+    needs: setup-node
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '23'
+      - name: Restore Node modules cache
+        uses: actions/cache@v3
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
+      - name: Run lint
+        run: |
+          cd backend
+          npm run lint || true
+
+  lint-flutter:
+    name: Lint Flutter
+    needs: setup-flutter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          channel: 'stable'
+      - name: Restore Flutter dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            mobile/.pub-cache/
+            mobile/.dart_tool/
+          key: ${{ runner.os }}-flutter-${{ hashFiles('mobile/pubspec.lock') }}
+      - name: Analyze Flutter code
+        run: |
+          cd mobile
+          flutter analyze
+
+  # Jobs de build
+  build-backend:
+    name: Build Backend
+    needs: [test-backend, lint-backend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '23'
+      - name: Install production dependencies
+        run: |
+          cd backend
+          npm ci --production
+          npm prune --production
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-build
+          path: backend/
+          retention-days: 7
+
+  build-android:
+    name: Build Android App
+    needs: [test-flutter, lint-flutter]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          channel: 'stable'
+      - name: Restore Flutter dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            mobile/.pub-cache/
+            mobile/.dart_tool/
+          key: ${{ runner.os }}-flutter-${{ hashFiles('mobile/pubspec.lock') }}
+      - name: Build APK
+        run: |
+          cd mobile
+          flutter build apk --release
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-app-release
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
+
+  build-ios:
+    name: Build iOS App
+    needs: [test-flutter, lint-flutter]
+    runs-on: macos-latest  # iOS build nécessite macOS runner
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          channel: 'stable'
+      - name: Restore Flutter dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            mobile/.pub-cache/
+            mobile/.dart_tool/
+          key: ${{ runner.os }}-flutter-${{ hashFiles('mobile/pubspec.lock') }}
+      - name: Build iOS (no codesign)
+        run: |
+          cd mobile
+          flutter build ios --release --no-codesign
+      - name: Upload iOS build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-app-release
+          path: mobile/build/ios/iphoneos
+          retention-days: 7
