@@ -17,7 +17,7 @@ jobs:
       - run:
           name: Install Flutter SDK
           command: |
-            wget -O flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.19.3-stable.tar.xz
+            wget -O flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.29.3-stable.tar.xz
             tar xf flutter.tar.xz -C ${HOME}
             export PATH="$PATH:${HOME}/flutter/bin"
             echo 'export PATH="$PATH:${HOME}/flutter/bin"' >> $BASH_ENV
