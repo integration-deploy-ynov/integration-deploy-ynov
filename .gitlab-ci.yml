@@ -5,7 +5,7 @@ stages:
 
 variables:
   FLUTTER_VERSION: "3.x"
-  NODE_VERSION: "18.x"
+  NODE_VERSION: "23"
 
 cache:
   paths:
@@ -30,7 +30,7 @@ setup:flutter:
 # Setup Node.js
 setup:node:
   stage: setup
-  image: node:$NODE_VERSION
+  image: node:23
   script:
     - cd backend
     - npm install
@@ -42,7 +42,7 @@ setup:node:
 # Tests du backend
 test:backend:
   stage: test
-  image: node:$NODE_VERSION
+  image: node:23
   needs:
     - setup:node
   script:
@@ -65,7 +65,7 @@ test:flutter:
 # Lint Backend
 lint:backend:
   stage: lint
-  image: node:$NODE_VERSION
+  image: node:23
   needs:
     - setup:node
   script:
