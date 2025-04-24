@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -101,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         });
       }
     } catch (e) {
-      print('Erreur lors de la récupération de l\'état de la lampe: $e');
+      developer.log('Erreur lors de la récupération de l\'état de la lampe', error: e);
       setState(() {
         _serverStatus = "NON CONNECTÉ";
       });
@@ -151,7 +152,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         }
       }
     } catch (e) {
-      print('Erreur lors de la communication avec le backend: $e');
+      developer.log('Erreur lors de la communication avec le backend', error: e);
       setState(() {
         _serverStatus = "NON CONNECTÉ";
       });
@@ -219,7 +220,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                       boxShadow: _isLampOn
                           ? [
                               BoxShadow(
-                                color: const Color(0xFF6E56F7).withOpacity(0.3),
+                                color: const Color(0xFF6E56F7).withAlpha(77), // 0.3 * 255 = ~77
                                 blurRadius: 30,
                                 spreadRadius: 10,
                               ),
@@ -247,12 +248,12 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withAlpha(77), // 0.3 * 255 = ~77
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: _isLampOn
-                      ? const Color(0xFF6E56F7).withOpacity(0.5)
-                      : Colors.grey.withOpacity(0.2),
+                      ? const Color(0xFF6E56F7).withAlpha(128) // 0.5 * 255 = ~128
+                      : Colors.grey.withAlpha(51), // 0.2 * 255 = ~51
                   width: 1.5,
                 ),
               ),
@@ -284,7 +285,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               style: GoogleFonts.spaceGrotesk(
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
-                color: Colors.white.withOpacity(0.6),
+                color: Colors.white.withAlpha(153), // 0.6 * 255 = ~153
                 letterSpacing: 1,
               ),
             ).animate().fadeIn(delay: 450.ms),
@@ -308,7 +309,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                   boxShadow: _isLampOn
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF6E56F7).withOpacity(0.6),
+                            color: const Color(0xFF6E56F7).withAlpha(153), // 0.6 * 255 = ~153
                             blurRadius: 20,
                             spreadRadius: 2,
                             offset: const Offset(0, 4),
@@ -332,12 +333,12 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   Color _getServerStatusColor() {
     switch (_serverStatus) {
       case "CONNECTÉ":
-        return Colors.green.withOpacity(0.8);
+        return Colors.green.withAlpha(204); // 0.8 * 255 = ~204
       case "ERREUR":
-        return Colors.red.withOpacity(0.8);
+        return Colors.red.withAlpha(204); // 0.8 * 255 = ~204
       case "NON CONNECTÉ":
       default:
-        return Colors.grey.withOpacity(0.8);
+        return Colors.grey.withAlpha(204); // 0.8 * 255 = ~204
     }
   }
 }
