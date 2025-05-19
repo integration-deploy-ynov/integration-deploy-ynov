@@ -1,0 +1,85 @@
+---
+- name: Déployer API Node.js sur VM Ubuntu
+  hosts: api_servers
+  become: yes
+  vars:
+    api_repo_url: "https://github.com/integration-deploy-ynov/integration-deploy-ynov.git"
+    api_dir: "/home/ubuntu/api"
+  tasks:
+    - name: Mettre à jour les paquets apt
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Installer dépendances de base
+      apt:
+        name:
+          - curl
+          - git
+          - build-essential
+        state: present
+
+    - name: Installer Node.js (setup LTS)
+      shell: curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+      args:
+        executable: /bin/bash
+      register: nodejs_setup
+      changed_when: "'deb.nodesource.com' in nodejs_setup.stdout"
+
+    - name: Installer nodejs
+      apt:
+        name: nodejs
+        state: present
+      when: nodejs_setup.changed
+
+    - name: Cloner le repo API (ou pull si déjà présent)
+      git:
+        repo: "{{ api_repo_url }}"
+        dest: "{{ api_dir }}"
+        version: main
+        force: yes
+        update: yes
+        accept_hostkey: yes
+      become_user: ubuntu
+
+    - name: Vérifier que package.json existe dans backend
+      stat:
+        path: "{{ api_dir }}/backend/package.json"
+      register: package_json
+
+    - name: Afficher la présence du package.json
+      debug:
+        msg: "package.json présent ? {{ package_json.stat.exists }}"
+
+    - name: Afficher la liste des fichiers dans backend
+      command: ls -l "{{ api_dir }}/backend"
+      register: list_backend_dir
+
+    - debug:
+        var: list_backend_dir.stdout_lines
+
+    - name: Installer les dépendances Node.js
+      npm:
+        path: "{{ api_dir }}/backend"
+        production: yes
+      when: package_json.stat.exists
+
+    - name: Installer pm2 globalement
+      npm:
+        name: pm2
+        global: yes
+
+    - name: Lancer l'API avec pm2
+      shell: pm2 start index.js --name api --cwd "{{ api_dir }}/backend" --update-env
+      args:
+        creates: /home/ubuntu/.pm2/pids/api.pid
+      become_user: ubuntu
+
+    - name: Configurer pm2 au démarrage système
+      shell: pm2 startup systemd -u ubuntu --hp /home/ubuntu
+      register: pm2_startup
+      changed_when: "'[PM2] Init System found: systemd' in pm2_startup.stdout"
+
+    - name: Sauvegarder la configuration pm2
+      shell: pm2 save
+      become_user: ubuntu
