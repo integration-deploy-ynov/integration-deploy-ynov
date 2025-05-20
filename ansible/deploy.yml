@@ -3,7 +3,7 @@
   hosts: api_servers
   become: yes
   vars:
-    api_repo_url: "https://github.com/integration-deploy-ynov/integration-deploy-ynov.git"
+    api_repo_url: "https://github.com/HichOps/integration-deploy-ynov.git"
     api_dir: "/home/ubuntu/api"
   tasks:
     - name: Mettre à jour les paquets apt
