@@ -4,7 +4,9 @@
   become: yes
   vars:
     api_repo_url: "https://github.com/HichOps/integration-deploy-ynov.git"
-    api_dir: "/home/ubuntu/api"
+    api_dir: "/home/ubuntu"
+    backend_dir: "{{ api_dir }}/integration-deploy-ynov/api/backend"
+
   tasks:
     - name: Mettre à jour les paquets apt
       apt:
@@ -35,7 +37,7 @@
     - name: Cloner le repo API (ou pull si déjà présent)
       git:
         repo: "{{ api_repo_url }}"
-        dest: "{{ api_dir }}"
+        dest: "{{ api_dir }}/integration-deploy-ynov"
         version: main
         force: yes
         update: yes
@@ -44,7 +46,7 @@
 
     - name: Vérifier que package.json existe dans backend
       stat:
-        path: "{{ api_dir }}/backend/package.json"
+        path: "{{ backend_dir }}/package.json"
       register: package_json
 
     - name: Afficher la présence du package.json
@@ -52,17 +54,19 @@
         msg: "package.json présent ? {{ package_json.stat.exists }}"
 
     - name: Afficher la liste des fichiers dans backend
-      command: ls -l "{{ api_dir }}/backend"
+      command: ls -l "{{ backend_dir }}"
       register: list_backend_dir
+      become_user: ubuntu
 
     - debug:
         var: list_backend_dir.stdout_lines
 
     - name: Installer les dépendances Node.js
       npm:
-        path: "{{ api_dir }}/backend"
+        path: "{{ backend_dir }}"
         production: yes
       when: package_json.stat.exists
+      become_user: ubuntu
 
     - name: Installer pm2 globalement
       npm:
@@ -70,7 +74,7 @@
         global: yes
 
     - name: Lancer l'API avec pm2
-      shell: pm2 start index.js --name api --cwd "{{ api_dir }}/backend" --update-env
+      shell: pm2 start index.js --name api --cwd "{{ backend_dir }}" --update-env
       args:
         creates: /home/ubuntu/.pm2/pids/api.pid
       become_user: ubuntu
@@ -79,6 +83,7 @@
       shell: pm2 startup systemd -u ubuntu --hp /home/ubuntu
       register: pm2_startup
       changed_when: "'[PM2] Init System found: systemd' in pm2_startup.stdout"
+      become_user: ubuntu
 
     - name: Sauvegarder la configuration pm2
       shell: pm2 save
