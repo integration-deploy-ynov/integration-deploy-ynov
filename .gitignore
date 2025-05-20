@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 .terraform/
+*.tfstate
+*.tfstate.*
+crash.log
 
 
 # IntelliJ related
