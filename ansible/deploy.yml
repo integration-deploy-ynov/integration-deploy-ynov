@@ -68,6 +68,11 @@
       when: package_json.stat.exists
       become_user: ubuntu
 
+    - name: Redémarrer l'API si elle est déjà démarrée
+      shell: pm2 restart api
+      become_user: ubuntu
+      ignore_errors: true
+
     - name: Installer pm2 globalement
       npm:
         name: pm2
@@ -80,10 +85,9 @@
       become_user: ubuntu
 
     - name: Configurer pm2 au démarrage système
-      shell: pm2 startup systemd -u ubuntu --hp /home/ubuntu
-      register: pm2_startup
-      changed_when: "'[PM2] Init System found: systemd' in pm2_startup.stdout"
-      become_user: ubuntu
+      shell: |
+        env PATH=$PATH:/usr/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu
+      become: yes
 
     - name: Sauvegarder la configuration pm2
       shell: pm2 save
