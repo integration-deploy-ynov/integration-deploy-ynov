@@ -7,6 +7,7 @@
     api_base_dir: "/home/ubuntu/integration-deploy-ynov"
     backend_dir: "{{ api_base_dir }}/api/backend"
     node_version_setup_script: "https://deb.nodesource.com/setup_lts.x"
+    sqlite_db_path: "{{ backend_dir }}/database.sqlite"
 
   tasks:
     - name: Mettre à jour la liste des paquets et faire un upgrade
@@ -20,7 +21,7 @@
           - curl
           - git
           - build-essential
-          - python3-pip  # utile si besoin d’outils python
+          - python3-pip
         state: present
 
     - name: Installer Node.js LTS via script officiel
@@ -35,6 +36,18 @@
         name: nodejs
         state: present
       when: nodejs_setup.changed
+
+    - name: Installer SQLite3
+      apt:
+        name: sqlite3
+        state: present
+
+    - name: Vérifier que le module npm sqlite est installé (si utilisé dans le projet)
+      npm:
+        name: sqlite3
+        path: "{{ backend_dir }}"
+        production: yes
+      become_user: ubuntu
 
     - name: Installer pm2 globalement via npm
       npm:
@@ -55,6 +68,20 @@
       npm:
         path: "{{ backend_dir }}"
         production: yes
+      become_user: ubuntu
+
+    - name: Créer le fichier de base de données SQLite s'il n'existe pas
+      file:
+        path: "{{ sqlite_db_path }}"
+        state: touch
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Initialiser la base de données SQLite avec le script Node.js
+      shell: node app/scripts/initDB.js
+      args:
+        chdir: "{{ backend_dir }}"
       become_user: ubuntu
 
     - name: Vérifier si pm2 a déjà l’API démarrée
