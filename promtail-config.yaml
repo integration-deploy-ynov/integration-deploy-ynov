@@ -1,0 +1,19 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/log/promtail/positions.yaml
+
+clients:
+  - url: http://<IP_VM>:3100/loki/api/v1/push # ← remplace <IP_VM> par l'IP ou DNS réel de ta VM
+
+scrape_configs:
+  - job_name: nodejs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nodejs
+          __path__: /home/<ton_user>/api/backend/logs/*.log  # ← corrige ici avec le chemin absolu réel vers tes logs
+          instance: ${HOSTNAME}
