@@ -6,6 +6,8 @@ const { Lamp } = require('../models');
 exports.readAll = async (req, res) => {
   try {
     const lamps = await Lamp.findAll();
+    console.log(`Récupération de toutes les lampes: ${JSON.stringify(lamps)}`);
+    
     res.status(200).json(lamps);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -21,6 +23,8 @@ exports.update = async (req, res) => {
 
   try {
     // Récupérer la lampe par son ID
+    console.log(`Mise à jour de la lampe avec ID: ${id}`);
+    
     const lamp = await Lamp.findByPk(id);
 
     if (!lamp) {

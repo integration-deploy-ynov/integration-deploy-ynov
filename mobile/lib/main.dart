@@ -43,7 +43,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
   bool _isLampOn = false;
   // URL de base pour l'API - correction du port pour correspondre au backend
-  final String apiUrl = 'http://10.0.2.2:5000/api';
+  final String apiUrl = 'http://localhost:5000/api';
   bool _isLoading = false;
   late AnimationController _animationController;
   String _serverStatus = "NON CONNECTÉ";

@@ -92,12 +92,77 @@ Le projet est organisé en deux parties principales :
 
 > **Note** : Par défaut, l'application mobile est configurée pour se connecter à `http://10.0.2.2:5000/api` qui est l'adresse du localhost de la machine hôte lorsqu'on utilise un émulateur Android. Pour utiliser un appareil physique ou modifier l'URL du backend, modifiez la variable `apiUrl` dans `lib/main.dart`.
 
+## 🔄 Gestion des Versions et Releases
+
+### Système de Versioning
+
+Le projet utilise [Semantic Versioning](https://semver.org/) avec le format `MAJOR.MINOR.PATCH`:
+
+- **MAJOR** : Changements incompatibles avec les versions précédentes
+- **MINOR** : Nouvelles fonctionnalités compatibles
+- **PATCH** : Corrections de bugs compatibles
+
+### Script de Release
+
+Un script automatisé `release.sh` permet de gérer facilement les releases :
+
+```bash
+# Lancer une nouvelle release
+./release.sh
+
+# Ou utiliser npm
+npm run release
+```
+
+Le script effectue automatiquement :
+- ✅ Vérifications préliminaires (Git, Node.js, Flutter)
+- ✅ Mise à jour des versions (backend + mobile)
+- ✅ Génération automatique du CHANGELOG
+- ✅ Exécution des tests
+- ✅ Création des commits et tags Git
+- ✅ Push vers le dépôt distant
+
+### Commandes Utiles
+
+```bash
+# Scripts de versioning
+npm run version:patch    # 1.0.0 → 1.0.1
+npm run version:minor    # 1.0.0 → 1.1.0
+npm run version:major    # 1.0.0 → 2.0.0
+
+# Scripts des sous-projets
+npm run backend:start    # Démarrer le backend
+npm run backend:test     # Tests backend
+npm run mobile:run       # Lancer l'app mobile
+npm run mobile:test      # Tests mobile
+
+# Génération de changelog
+npm run changelog        # Générer les changements depuis le dernier tag
+```
+
+### Tags Git
+
+Les releases sont automatiquement taggées avec le format `vX.Y.Z` :
+
+```bash
+# Voir toutes les versions
+git tag -l
+
+# Voir les détails d'une version
+git show v1.0.0
+
+# Voir les changements entre versions
+git log --oneline v1.0.0..v1.1.0
+```
+
 ## 📚 Documentation
 
 Pour plus de détails sur chaque composant du système, consultez les README spécifiques :
 
 - [Documentation Backend](./backend/README.md)
 - [Documentation Frontend](./mobile/README.md)
+- [Changelog](./CHANGELOG.md) - Historique des versions
+- [Stratégie Git](./GIT_STRATEGY.md) - Workflow de développement
 
 ## 🧪 Technologies Utilisées
 
@@ -119,6 +184,15 @@ Pour plus de détails sur chaque composant du système, consultez les README sp�
 ## 🤝 Contribution
 
 Les contributions sont les bienvenues ! N'hésitez pas à soumettre des issues ou des pull requests.
+
+Pour contribuer :
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/amazing-feature`)
+3. Commiter les changements (`git commit -m 'feat: add amazing feature'`)
+4. Pousser la branche (`git push origin feature/amazing-feature`)
+5. Ouvrir une Pull Request
+
+Consultez [GIT_STRATEGY.md](./GIT_STRATEGY.md) pour plus de détails sur les conventions.
 
 ## 📄 Licence
 

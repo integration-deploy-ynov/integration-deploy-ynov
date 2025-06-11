@@ -6,7 +6,7 @@ import 'mocks/lamp_service_mock.dart';
 
 void main() {
   late MockClient mockClient;
-  final String apiUrl = 'http://10.0.2.2:5000/api';
+  final String apiUrl = 'http://localhost:5000/api';
 
   setUp(() {
     mockClient = MockClient();
