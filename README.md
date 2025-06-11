@@ -92,12 +92,62 @@ Le projet est organisé en deux parties principales :
 
 > **Note** : Par défaut, l'application mobile est configurée pour se connecter à `http://10.0.2.2:5000/api` qui est l'adresse du localhost de la machine hôte lorsqu'on utilise un émulateur Android. Pour utiliser un appareil physique ou modifier l'URL du backend, modifiez la variable `apiUrl` dans `lib/main.dart`.
 
+## 🏷️ Versioning et Releases
+
+Ce projet utilise [Semantic Versioning](https://semver.org/) avec des tags Git automatisés et un CHANGELOG maintenu automatiquement.
+
+### 🚀 Créer une Release
+
+```bash
+# Release automatique (menu interactif)
+./release.sh
+
+# Release directe par type
+./release.sh patch   # v1.0.0 → v1.0.1 (corrections)
+./release.sh minor   # v1.0.0 → v1.1.0 (nouvelles fonctionnalités)
+./release.sh major   # v1.0.0 → v2.0.0 (breaking changes)
+```
+
+### 📝 Commits Conventionnels
+
+Pour faciliter les commits, utilisez le script helper :
+
+```bash
+# Mode interactif
+./commit.sh
+
+# Mode direct
+./commit.sh feat api "ajouter endpoint de contrôle luminosité"
+./commit.sh fix mobile "corriger crash au démarrage"
+```
+
+### 📋 Suivi des Versions
+
+- **VERSION** : Fichier contenant la version actuelle
+- **CHANGELOG.md** : Historique automatique des changements
+- **Tags Git** : Tags annotés pour chaque version (`v1.0.0`, `v1.1.0`, etc.)
+
+### 🔄 Processus de Release Automatisé
+
+Le script `release.sh` effectue automatiquement :
+
+1. ✅ Vérification de l'état Git
+2. 🧪 Exécution des tests
+3. 📝 Mise à jour des versions
+4. 📋 Mise à jour du CHANGELOG
+5. 🏷️ Création du tag Git
+6. 🚀 Déploiement via Ansible
+
+Pour plus de détails, consultez [VERSIONING.md](./VERSIONING.md).
+
 ## 📚 Documentation
 
 Pour plus de détails sur chaque composant du système, consultez les README spécifiques :
 
 - [Documentation Backend](./backend/README.md)
 - [Documentation Frontend](./mobile/README.md)
+- [Système de Versioning](./VERSIONING.md)
+- [Stratégie Git](./GIT_STRATEGY.md)
 
 ## 🧪 Technologies Utilisées
 
@@ -116,9 +166,24 @@ Pour plus de détails sur chaque composant du système, consultez les README sp�
 - Flutter Animate
 - Google Fonts
 
+### DevOps & Infrastructure
+- **CI/CD** : GitLab CI, CircleCI, GitHub Actions
+- **Infrastructure** : Terraform (IaC)
+- **Déploiement** : Ansible
+- **Containerisation** : Docker
+- **Monitoring** : Promtail, Logging avec Winston
+
 ## 🤝 Contribution
 
 Les contributions sont les bienvenues ! N'hésitez pas à soumettre des issues ou des pull requests.
+
+### Workflow de Contribution
+
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/amazing-feature`)
+3. Utiliser les commits conventionnels (`./commit.sh feat "votre feature"`)
+4. Pousser vers la branche (`git push origin feature/amazing-feature`)
+5. Ouvrir une Pull Request
 
 ## 📄 Licence
 
