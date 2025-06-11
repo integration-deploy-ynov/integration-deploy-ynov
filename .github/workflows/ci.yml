@@ -153,3 +153,96 @@ jobs:
         with:
           name: ios-app-release
           path: api/mobile/build/ios/iphoneos
+
+  deploy-to-gcp:
+    name: Deploy Backend to GCP VM
+    needs: [build-backend]  # Attend que le build backend soit terminé
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'  # Seulement sur la branche main
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download backend build
+      uses: actions/download-artifact@v4
+      with:
+        name: backend-build
+        path: ./backend-build/
+        
+    - name: Setup Google Cloud CLI
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        
+    - name: Configure SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.VM_IP }} >> ~/.ssh/known_hosts
+        
+    - name: Deploy to VM
+      run: |
+        # Créer le répertoire de déploiement sur la VM
+        ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.VM_IP }} "mkdir -p /home/ubuntu/app/backend"
+        
+        # Copier les fichiers du backend
+        scp -i ~/.ssh/id_rsa -r ./backend-build/* ubuntu@${{ secrets.VM_IP }}:/home/ubuntu/app/backend/
+        
+        # Copier le fichier de config Promtail si il existe
+        if [ -f ./promtail-config.yaml ]; then
+          scp -i ~/.ssh/id_rsa ./promtail-config.yaml ubuntu@${{ secrets.VM_IP }}:/home/ubuntu/app/
+        fi
+        
+        # Déployer sur la VM
+        ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.VM_IP }} << 'EOF'
+          # Mettre à jour le système
+          sudo apt update
+          
+          # Installer Node.js 22 si pas déjà installé
+          if ! node --version 2>/dev/null | grep -q "v22"; then
+            curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+          fi
+          
+          # Aller dans le répertoire de l'app
+          cd /home/ubuntu/app/backend
+          
+          # Installer les dépendances de production
+          npm ci --production
+          
+          # Initialiser la base de données
+          node app/scripts/initDB.js
+          
+          # Arrêter l'ancien processus s'il existe
+          pkill -f "node.*app.js" || true
+          
+          # Installer PM2 globalement pour la gestion des processus
+          sudo npm install -g pm2
+          
+          # Démarrer l'application avec PM2
+          pm2 delete api-backend || true
+          pm2 start app.js --name api-backend
+          pm2 save
+          pm2 startup | grep "sudo" | bash || true
+        EOF
+        
+    - name: Health Check
+      run: |
+        # Attendre que l'application démarre
+        sleep 15
+        
+        # Tester l'endpoint de santé
+        for i in {1..5}; do
+          if curl -f http://${{ secrets.VM_IP }}:3000/health; then
+            echo "✅ Deployment successful!"
+            exit 0
+          fi
+          echo "⏳ Waiting for app to start... (attempt $i/5)"
+          sleep 10
+        done
+        
+        echo "❌ Deployment failed - health check timeout"
+        exit 1

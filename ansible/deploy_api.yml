@@ -1,37 +1,84 @@
-name: Deploy API after CI
+---
+- name: Déployer API Node.js sur VM Ubuntu
+  hosts: api_servers
+  become: yes
+  vars:
+    api_repo_url: "https://github.com/HichOps/integration-deploy-ynov.git"
+    api_base_dir: "/home/ubuntu/integration-deploy-ynov"
+    backend_dir: "{{ api_base_dir }}/api/backend"
+    node_version_setup_script: "https://deb.nodesource.com/setup_lts.x"
 
-on:
-  workflow_run:
-    workflows: ["CI/CD Flutter & Node.js"]
-    types:
-      - completed
+  tasks:
+    - name: Mettre à jour la liste des paquets et faire un upgrade
+      apt:
+        update_cache: yes
+        upgrade: dist
 
-jobs:
-  deploy-api:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Installer dépendances de base
+      apt:
+        name:
+          - curl
+          - git
+          - build-essential
+          - python3-pip  # utile si besoin d’outils python
+        state: present
 
-      - name: Install Ansible
-        run: |
-          sudo apt update
-          sudo apt install -y ansible
+    - name: Installer Node.js LTS via script officiel
+      shell: curl -fsSL {{ node_version_setup_script }} | bash -
+      args:
+        executable: /bin/bash
+      register: nodejs_setup
+      changed_when: "'deb.nodesource.com' in nodejs_setup.stdout"
 
-      - name: Setup SSH key for Ansible
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa_projet_individuel
-          chmod 600 ~/.ssh/id_rsa_projet_individuel
+    - name: Installer nodejs
+      apt:
+        name: nodejs
+        state: present
+      when: nodejs_setup.changed
 
-      - name: Create Ansible inventory
-        run: |
-          echo "[api_servers]" > inventory.ini
-          echo "34.76.30.58 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa_projet_individuel" >> inventory.ini
+    - name: Installer pm2 globalement via npm
+      npm:
+        name: pm2
+        global: yes
 
-      - name: Test SSH connectivity
-        run: ansible -i ./inventory.ini api_servers -m ping
+    - name: Cloner ou mettre à jour le repo API
+      git:
+        repo: "{{ api_repo_url }}"
+        dest: "{{ api_base_dir }}"
+        version: main
+        force: yes
+        update: yes
+        accept_hostkey: yes
+      become_user: ubuntu
 
-      - name: Run Ansible playbook
-        run: ansible-playbook -i ./inventory.ini ./ansible/deploy_api.yml
+    - name: Installer les dépendances Node.js backend
+      npm:
+        path: "{{ backend_dir }}"
+        production: yes
+      become_user: ubuntu
+
+    - name: Vérifier si pm2 a déjà l’API démarrée
+      shell: pm2 describe api
+      register: pm2_api_status
+      ignore_errors: yes
+      become_user: ubuntu
+
+    - name: Redémarrer l'API si déjà démarrée sinon la démarrer
+      shell: |
+        if [[ {{ pm2_api_status.rc }} -eq 0 ]]; then
+          pm2 restart api
+        else
+          pm2 start index.js --name api --cwd "{{ backend_dir }}" --update-env
+        fi
+      args:
+        executable: /bin/bash
+      become_user: ubuntu
+
+    - name: Configurer pm2 pour démarrage automatique au boot
+      shell: |
+        env PATH=$PATH:/usr/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu
+      become: yes
+
+    - name: Sauvegarder la configuration pm2
+      shell: pm2 save
+      become_user: ubuntu
