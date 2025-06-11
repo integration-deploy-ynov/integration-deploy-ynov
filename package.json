@@ -1,0 +1,35 @@
+{
+  "name": "smart-lighting",
+  "version": "1.0.1",
+  "description": "Système de Contrôle d'Éclairage Intelligent - Backend Node.js + Application Mobile Flutter",
+  "scripts": {
+    "release": "./release.sh",
+    "changelog": "git log --pretty=format:'- %s (%h)' --since='$(git describe --tags --abbrev=0 2>/dev/null || echo \"HEAD\")' > CHANGELOG_NEW.md",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version",
+    "backend:start": "cd backend && npm start",
+    "backend:test": "cd backend && npm test",
+    "mobile:run": "cd mobile && flutter run",
+    "mobile:test": "cd mobile && flutter test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "keywords": [
+    "smart-lighting",
+    "flutter",
+    "nodejs",
+    "express",
+    "sqlite",
+    "iot"
+  ],
+  "author": "Smart Lighting Team",
+  "license": "MIT",
+  "devDependencies": {},
+  "workspaces": [
+    "backend",
+    "mobile"
+  ]
+}
