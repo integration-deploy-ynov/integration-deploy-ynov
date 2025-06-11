@@ -16,6 +16,7 @@ migrate_working_dir/
 *.tfstate.*
 crash.log
 key-projetindividuel.json
+key-TP-FilRouge-Final.json
 .ssh/
 
 # IntelliJ related
